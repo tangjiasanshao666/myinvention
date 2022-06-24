@@ -1,0 +1,117 @@
+#include <IRremote.h>
+#include <Servo.h>
+const int fan1 = 5;
+const int fan2 = 6;
+const int anniu = 8;
+const int fan3 = 11;
+const int fan4 = 13;
+int speed = 0;
+#define k1 140
+#define k2 190
+#define k3 240
+int fanstatus;
+int newstatus = LOW;
+long newtime = 0;
+long delay = 45;
+Servo myservo;
+int tocontrol = 0;
+int a = 80;
+int aincrease = 2;
+IRrecv irrecv(fan3);
+decode_results results;
+ void setup() {
+    pinMode(anniu,INPUT);
+    pinMode(fan4,OUTPUT);
+    pinMode(fan1,OUTPUT);
+    pinMode(fan2,OUTPUT);
+    myservo.attach(3);
+    Serial.begin(9600);
+    irrecv.enableIRIn();
+}
+void loop() {
+    newstatus = reading;
+    if (irrecv.decode(&results)) {                //红外线
+        switch (results.value) {
+            case 0xFF30CF:
+                Serial.println("你按下了1");
+                speed = 1;
+                break;
+            case 0xFF18E7:
+                Serial.println("你按下了2");
+                speed = 2;
+                break;
+            case 0xFF7A85:
+                Serial.println("你按下了3");
+                speed = 3;
+                break;
+            case 0xFF22DD:
+                Serial.println("你按下了|<<");
+                speed = speed - 1;
+                if (speed <= 0) {
+                    speed = 0;
+                    tocontrol = 0;
+                    a = myservo.read();
+                }
+                break;
+            case 0xFF02FD:
+                Serial.println("你按下了>>|");
+                speed = speed + 1;
+                if (speed >= 3) {
+                    speed = 3;
+                }
+                break;
+            case 0xFF629D:
+                Serial.println("你按下了CH");
+                speed = 0;
+                tocontrol = 0;
+                a = myservo.read();
+                break;
+            case 0xFFE21D:
+                Serial.println("你按下了CH+");
+                if (speed != 0) {
+                    tocontrol = 1;
+                }
+                else
+                    Serial.println("失败");
+                break;
+            case 0xFFA25D:
+                Serial.println("你按下了CH-");
+                tocontrol = 0;
+                a = myservo.read();
+                break;
+        }
+        delay(600);
+        while (!irrecv.isIdle());
+        irrecv.resume();
+    }
+    switch (speed) { 
+        case 1:
+            analogWrite(fan1, 0);     //速度 
+            analogWrite(fan2, k1);
+            break;
+        case 2:
+            analogWrite(fan1, 0);
+            analogWrite(fan2, k2);
+            break;
+        case 3:
+            analogWrite(fan1, 0);
+            analogWrite(fan2, k3);
+            break;
+        default:
+            analogWrite(fan1, 0);
+            analogWrite(fan2, 0);
+            break;
+    }
+    switch (tocontrol) {                     //控制 
+        case 1:
+            myservo.write(a);
+            delay(3);                    
+            a = a + aincrease;
+            if (a == 130 || a == 25)
+                aincrease = -aincrease;
+            break;
+        case 0:
+            a = myservo.read();
+            break;
+    }
+} 
